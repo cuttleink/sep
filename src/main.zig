@@ -1,30 +1,23 @@
 const std = @import("std");
 
-const MachO = @import("MachO/mod.zig");
+const macho = @import("macho.zig");
 
-pub fn main(init: std.process.Init) !void {
-    const alloc = init.gpa;
-    const io = init.io;
-
-    var args = try init.minimal.args
-        .iterateAllocator(alloc);
-    defer args.deinit();
-
-    const name = args.next().?;
-    const output = args.next() orelse {
-        std.debug.print("Usage: {s} <output>\n", .{name});
-        std.process.exit(1);
-    };
-
-    var macho: MachO = try .open_rel(
-        io,
-        output,
-        .{
-            .cpu = .arm64(.all),
-            .type = .execute,
+const exe = struct {
+    const header = macho.Header64{ .inner = .{
+        .magic = .@"64",
+        .cpu = .arm64(.all),
+        .type = .execute,
+        .cmds_len = 0,
+        .cmds_size = 0,
+        .flags = .{
+            .dyld = true,
+            .pie = true,
         },
-        0,
-    );
+    } };
+};
 
-    try macho.close(io);
+pub fn main() void {}
+
+fn size(value: anytype) comptime_int {
+    return @sizeOf(@TypeOf(value));
 }
