@@ -34,6 +34,8 @@ pub fn open_rel(
 }
 
 pub fn close(self: *@This(), io: std.Io) !void {
+    defer self.map.destroy(io);
+
     write(self.map.memory, raw.Header{
         .magic = .from(self.header.cpu),
         .cpu = self.header.cpu,
@@ -44,7 +46,6 @@ pub fn close(self: *@This(), io: std.Io) !void {
     });
 
     try self.map.write(io);
-    self.map.destroy(io);
 }
 
 pub const Cpu = extern struct {

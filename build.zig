@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const exe = b.addExecutable(.{
-        .name = "cal",
+        .name = "sep",
         .root_module = mod,
     });
 

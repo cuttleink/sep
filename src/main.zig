@@ -1,9 +1,6 @@
-const builtin = @import("builtin");
 const std = @import("std");
 
 const MachO = @import("MachO/mod.zig");
-
-const exe = .{};
 
 pub fn main(init: std.process.Init) !void {
     const alloc = init.gpa;
