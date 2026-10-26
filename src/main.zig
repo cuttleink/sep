@@ -1,23 +1,33 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
-const macho = @import("macho.zig");
+const MachO = @import("MachO/mod.zig");
 
-const exe = struct {
-    const header: macho.Header64 = .{
-        .cpu = .arm64(.all),
-        .type = .execute,
-        .cmds_len = 0,
-        .cmds_size = 0,
-    };
-};
+const exe = .{};
 
 pub fn main(init: std.process.Init) !void {
-    var buf: [4096]u8 = undefined;
-    const file = std.Io.File.stdout();
-    var writer = file.writer(init.io, &buf);
+    const alloc = init.gpa;
+    const io = init.io;
 
-    const w = &writer.interface;
-    try w.writeStruct(exe.header, .little);
+    var args = try init.minimal.args
+        .iterateAllocator(alloc);
+    defer args.deinit();
 
-    try writer.flush();
+    const name = args.next().?;
+    const output = args.next() orelse {
+        std.debug.print("Usage: {s} <output>\n", .{name});
+        std.process.exit(1);
+    };
+
+    var macho: MachO = try .open_rel(
+        io,
+        output,
+        .{
+            .cpu = .arm64(.all),
+            .type = .execute,
+        },
+        0,
+    );
+
+    try macho.close(io);
 }
