@@ -54,3 +54,15 @@ pub const Header64 = extern struct {
     inner: Header,
     _: u32 = 0,
 };
+
+pub const Segment64 = Command(0x19, extern struct {});
+
+fn Command(id: comptime_int, T: type) type {
+    return extern struct {
+        pub const Body = T;
+
+        id: u32 = id,
+        size: u32 = @sizeOf(T),
+        body: T,
+    };
+}
