@@ -32,9 +32,9 @@ pub fn main(init: std.process.Init) !void {
 
     try w.writeStruct(elf.Elf64{
         .data = .from(endian),
-        .type = .executable,
+        .type = .dynamic,
         .machine = .riscv,
-        .entry = 0x10000 + pre,
+        .entry = pre,
         .ph_len = 1,
     }, endian);
 
@@ -45,7 +45,6 @@ pub fn main(init: std.process.Init) !void {
             .readable = true,
         },
         .file_off = 0,
-        .virt_addr = 0x10000,
         .file_size = size,
         .virt_size = size,
     }, endian);
@@ -58,8 +57,8 @@ pub fn main(init: std.process.Init) !void {
 const text = struct {
     const code = [_]u32{
         0x13051000, // li    a0, 1
-        0xb7050100, // lui   a1, 0x10
-        0x9385c509, // addi  a1, a1,  0x9c
+        0x97050000, // auipc a1, 0
+        0x93850502, // addi  a1, a1, 0x20
         0x1306e000, // li    a2, 14
         0x93080004, // li    a7, 64
         0x73000000, // ecall
