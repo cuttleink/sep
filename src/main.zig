@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const elf = @import("elf.zig");
+const riscv = @import("riscv.zig");
 
 const endian: std.lang.Endian = .little;
 
@@ -56,15 +57,17 @@ pub fn main(init: std.process.Init) !void {
 
 const text = struct {
     const code = [_]u32{
-        0x13051000, // li    a0, 1
-        0x97050000, // auipc a1, 0
-        0x93850502, // addi  a1, a1, 0x20
-        0x1306e000, // li    a2, 14
-        0x93080004, // li    a7, 64
-        0x73000000, // ecall
-        0x13050000, // li    a0, 0
-        0x9308d005, // li    a7, 93
-        0x73000000, // ecall
+        riscv.auipc(.a1, 0),
+        riscv.addi(.a1, .a1, 0x24),
+
+        riscv.addi(.a0, .zero, 1),
+        riscv.addi(.a2, .zero, data.len),
+        riscv.addi(.a7, .zero, 64),
+        riscv.ecall(),
+
+        riscv.addi(.a0, .zero, 0),
+        riscv.addi(.a7, .zero, 93),
+        riscv.ecall(),
     };
 
     const data = "Hello, world!\n";
@@ -74,7 +77,7 @@ fn concat(code: []const u32, data: []const u8) [code.len * 4 + data.len]u8 {
     var out: [code.len * 4 + data.len]u8 = undefined;
 
     for (code, 0..) |word, i|
-        std.mem.writeInt(u32, out[i * 4 ..][0..4], word, .big);
+        std.mem.writeInt(u32, out[i * 4 ..][0..4], word, endian);
     @memcpy(out[code.len * 4 ..][0..data.len], data);
 
     return out;
