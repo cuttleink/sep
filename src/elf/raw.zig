@@ -8,7 +8,7 @@ pub const Elf64 = extern struct {
     data: Data,
     _0: u8 = 1,
     abi: Abi = .sysv,
-    _1: [7]u8 = @splat(0),
+    _1: [8]u8 = @splat(0),
     type: Type,
     machine: Machine,
     _2: u32 = 1,
@@ -38,10 +38,7 @@ pub const Elf64 = extern struct {
 
     pub const Abi = enum(u8) { sysv = 0 };
 
-    pub const Type = enum(u16) {
-        executable = 2,
-        dynamic = 3,
-    };
+    pub const Type = enum(u16) { dynamic = 3 };
 
     pub const Machine = enum(u16) { riscv = 0xf3 };
 };
@@ -50,18 +47,18 @@ pub const Program64 = extern struct {
     type: Type,
     flags: Flags,
     file_off: u64,
-    virt_addr: u64 = 0,
+    virt_addr: u64,
     phys_addr: u64 = 0,
     file_size: u64,
     virt_size: u64,
-    @"align": u64 = 0,
+    @"align": u64,
 
     pub const Type = enum(u32) { load = 1 };
 
     pub const Flags = packed struct(u32) {
-        executable: bool = false,
-        writable: bool = false,
-        readable: bool = false,
+        execute: bool = false,
+        write: bool = false,
+        read: bool = false,
         _: u29 = 0,
     };
 };
