@@ -5,10 +5,6 @@ const riscv = @import("riscv.zig");
 
 const endian: std.lang.Endian = .little;
 
-const pre = @sizeOf(elf.Elf64) + @sizeOf(elf.Program64);
-const blob = concat(&text.code, text.data);
-const size = pre + blob.len;
-
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const alloc = init.gpa;
@@ -29,7 +25,16 @@ pub fn main(init: std.process.Init) !void {
 
     var buf: [4096]u8 = undefined;
     var writer = file.writer(io, &buf);
-    const w = &writer.interface;
+
+    try write(alloc, &writer.interface);
+    try writer.flush();
+}
+
+fn write(alloc: std.mem.Allocator, w: *std.Io.Writer) !void {
+    _ = alloc;
+
+    const pre = @sizeOf(elf.Elf64) + @sizeOf(elf.Program64);
+    const total = pre + blob.len;
 
     try w.writeStruct(elf.Elf64{
         .data = .from(endian),
@@ -46,38 +51,36 @@ pub fn main(init: std.process.Init) !void {
             .readable = true,
         },
         .file_off = 0,
-        .file_size = size,
-        .virt_size = size,
+        .file_size = total,
+        .virt_size = total,
     }, endian);
 
     try w.writeAll(&blob);
-
-    try writer.flush();
 }
 
-const text = struct {
-    const code = [_]u32{
-        riscv.auipc(.a1, 0),
-        riscv.addi(.a1, .a1, 0x24),
+const text = "Hello, world!\n";
+const blob = concat(&.{
+    .auipc(.a1, 0),
+    .addi(.a1, .a1, 0x24),
 
-        riscv.addi(.a0, .zero, 1),
-        riscv.addi(.a2, .zero, data.len),
-        riscv.addi(.a7, .zero, 64),
-        riscv.ecall(),
+    .addi(.a0, .zero, 1),
+    .addi(.a2, .zero, text.len),
+    .addi(.a7, .zero, 64),
+    .ecall(),
 
-        riscv.addi(.a0, .zero, 0),
-        riscv.addi(.a7, .zero, 93),
-        riscv.ecall(),
-    };
+    .addi(.a0, .zero, 0),
+    .addi(.a7, .zero, 93),
+    .ecall(),
+}, text);
 
-    const data = "Hello, world!\n";
-};
-
-fn concat(code: []const u32, data: []const u8) [code.len * 4 + data.len]u8 {
+fn concat(
+    code: []const riscv.Instruction,
+    data: []const u8,
+) [code.len * 4 + data.len]u8 {
     var out: [code.len * 4 + data.len]u8 = undefined;
 
     for (code, 0..) |word, i|
-        std.mem.writeInt(u32, out[i * 4 ..][0..4], word, endian);
+        std.mem.writeInt(u32, out[i * 4 ..][0..4], @backingInt(word), endian);
     @memcpy(out[code.len * 4 ..][0..data.len], data);
 
     return out;

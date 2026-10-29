@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const Register = enum(u5) {
     zero,
     ra,
@@ -33,51 +35,62 @@ pub const Register = enum(u5) {
     t6,
 };
 
-pub const I = packed struct {
-    opcode: Opcode,
-    dest: Register,
-    func: u3,
-    source: Register,
-    imm: u12,
+pub const Instruction = enum(u32) {
+    _,
 
-    pub const Opcode = enum(u7) {
-        imm = 0b0010011,
+    pub const auipc = U(.auipc);
+    pub const addi = I(.op_imm, 0b000);
+    pub const ecall = fixed(I(.system, 0b000)(.zero, .zero, 0));
+
+    const Op = enum(u7) {
+        op_imm = 0b0010011,
+        auipc = 0b0010111,
         system = 0b1110011,
     };
+
+    fn I(op: Op, func: u3) fn (Register, Register, i12) Instruction {
+        return struct {
+            fn a(dest: Register, source: Register, imm: i12) Instruction {
+                return @bitCast(pack(.{ op, dest, func, source, imm }));
+            }
+        }.a;
+    }
+
+    fn U(op: Op) fn (Register, i20) Instruction {
+        return struct {
+            fn a(dest: Register, imm: i20) Instruction {
+                return @bitCast(pack(.{ op, dest, imm }));
+            }
+        }.a;
+    }
+
+    fn fixed(inst: Instruction) fn () Instruction {
+        return struct {
+            fn a() Instruction {
+                return inst;
+            }
+        }.a;
+    }
 };
 
-pub const U = packed struct {
-    opcode: Opcode,
-    dest: Register,
-    imm: u20,
-
-    pub const Opcode = enum(u7) { auipc = 0b0010111 };
-};
-
-pub fn addi(dest: Register, source: Register, imm: i12) u32 {
-    return @bitCast(I{
-        .opcode = .imm,
-        .dest = dest,
-        .func = 0,
-        .source = source,
-        .imm = @bitCast(imm),
-    });
+fn pack(value: anytype) Pack(@TypeOf(value)) {
+    const Value = @TypeOf(value);
+    var new: Pack(Value) = undefined;
+    inline for (@typeInfo(Value).@"struct".field_names) |name|
+        @field(new, name) = @field(value, name);
+    return new;
 }
 
-pub fn ecall() u32 {
-    return @bitCast(I{
-        .opcode = .system,
-        .dest = .zero,
-        .func = 0,
-        .source = .zero,
-        .imm = 0,
-    });
-}
+fn Pack(T: type) type {
+    const info = @typeInfo(T).@"struct";
+    const attrs: [info.field_names.len]std.lang.Type
+        .Struct.FieldAttributes = @splat(.{});
 
-pub fn auipc(dest: Register, imm: i20) u32 {
-    return @bitCast(U{
-        .opcode = .auipc,
-        .dest = dest,
-        .imm = @bitCast(imm),
-    });
+    return @Struct(
+        .@"packed",
+        null,
+        info.field_names,
+        info.field_types,
+        &attrs,
+    );
 }
