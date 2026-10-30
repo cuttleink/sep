@@ -1,28 +1,27 @@
 const std = @import("std");
 
-const elf = @import("elf/mod.zig");
+const Elf = @import("Elf/mod.zig");
 
 const text = "Hello, world!\n";
-const segs: []const elf.Segment = &.{
-    .{
-        .flags = .{ .execute = true, .read = true },
-        .content = .{ .code = &.{
-            .auipc(.a1, 1),
-            .addi(.a1, .a1, -176),
+const elf = Elf{
+    .text = &.{
+        .auipc(.a1, 1),
+        .addi(.a1, .a1, 36),
 
-            .addi(.a0, .zero, 1),
-            .addi(.a2, .zero, text.len),
-            .addi(.a7, .zero, 64),
-            .ecall(),
+        .addi(.a0, .zero, 1),
+        .addi(.a2, .zero, text.len),
+        .addi(.a7, .zero, 64),
+        .ecall(),
 
-            .addi(.a0, .zero, 0),
-            .addi(.a7, .zero, 93),
-            .ecall(),
-        } },
+        .addi(.a0, .zero, 0),
+        .addi(.a7, .zero, 93),
+        .ecall(),
     },
-    .{
-        .flags = .{ .read = true },
-        .content = .{ .data = text },
+    .segments = &.{
+        .{
+            .flags = .{ .read = true },
+            .data = text,
+        },
     },
 };
 
@@ -54,5 +53,5 @@ pub fn main(init: std.process.Init) !void {
 fn write(alloc: std.mem.Allocator, w: *std.Io.Writer) !void {
     _ = alloc;
 
-    try elf.write(w, segs);
+    try elf.write(w);
 }

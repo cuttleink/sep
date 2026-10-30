@@ -51,7 +51,7 @@ pub const Program64 = extern struct {
     phys_addr: u64 = 0,
     file_size: u64,
     virt_size: u64,
-    @"align": u64,
+    @"align": u64 = 0,
 
     pub const Type = enum(u32) { load = 1 };
 
